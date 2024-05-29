@@ -1,65 +1,71 @@
 document.getElementById('search-button').addEventListener('click', function() {
     const query = document.getElementById('search-input').value;
     if (query) {
-        searchAll(query);
+        searchWikipedia(query);
+        searchDictionary(query);
     }
 });
 
-function searchAll(query) {
-    const wikipediaEndpoint = `https://en.wikipedia.org/w/api.php?origin=*&action=query&list=search&srsearch=${encodeURIComponent(query)}&format=json`;
-    const youTubeEndpoint = `https://www.googleapis.com/youtube/v3/search?q=${encodeURIComponent(query)}&part=snippet&type=video`;
-    const gitHubEndpoint = `https://api.github.com/search/repositories?q=${encodeURIComponent(query)}`;
+function searchWikipedia(query) {
+    const endpoint = `reddit.com`;
 
-    Promise.all([
-        fetch(wikipediaEndpoint).then(response => response.json()),
-        fetch(youTubeEndpoint).then(response => response.json()),
-        fetch(gitHubEndpoint).then(response => response.json())
-    ])
-    .then(([wikipediaData, youTubeData, gitHubData]) => {
-        const allResults = mergeResults(wikipediaData.query.search, youTubeData.items, gitHubData.items);
-        displayAllResults(allResults);
-    })
-    .catch(error => console.error('Error:', error));
+    fetch(endpoint)
+        .then(response => response.json())
+        .then(data => {
+            displayResults(data.query.search);
+        })
+        .catch(error => console.error('Error:', error));
 }
 
-function mergeResults(wikipediaResults, youTubeResults, gitHubResults) {
-    const mergedResults = [...wikipediaResults, ...youTubeResults, ...gitHubResults];
-    return mergedResults;
-}
-
-function displayAllResults(results) {
+function displayResults(results) {
     const resultsContainer = document.getElementById('results-container');
-    resultsContainer.innerHTML = '';
+    resultsContainer.innerHTML = ''; // Clear previous results
 
     results.forEach(result => {
-        let title, description, url;
-
-        if (result.title && result.snippet) {
-            title = result.title;
-            description = result.snippet;
-            url = `https://en.wikipedia.org/?curid=${result.pageid}`;
-        } else if (result.id && result.snippet) {
-            title = result.snippet.title;
-            description = result.snippet.description;
-            url = `https://www.youtube.com/watch?v=${result.id.videoId}`;
-        } else if (result.full_name && result.html_url) {
-            title = result.full_name;
-            description = result.description;
-            url = result.html_url;
-        }
-        
+        const url = `https://en.wikipedia.org/?curid=${result.pageid}`;
         const resultItem = document.createElement('div');
         resultItem.className = 'result-item';
         resultItem.innerHTML = `
-            <h3><a href="${url}" target="_blank">${title}</a></h3>
-            <p>${description}</p>
+            <h3><a href="${url}" target="_blank">${result.title}</a></h3>
+            <p>${result.snippet}</p>
         `;
         const saveButton = document.createElement('button');
-        saveButton.textContent = 'Save';
-        saveButton.onclick = () => saveToFavorites(title, url);
-        resultItem.appendChild(saveButton);
+    saveButton.textContent = 'Save';
+    saveButton.onclick = () => saveToFavorites(result.title, url);
+    resultItem.appendChild(saveButton);
         resultsContainer.appendChild(resultItem);
     });
+}
+
+function searchDictionary(query) {
+    const endpoint = `https://api.dictionaryapi.dev/api/v2/entries/en/${encodeURIComponent(query)}`;
+
+    fetch(endpoint)
+        .then(response => response.json())
+        .then(data => {
+            displayDictionaryResults(data);
+        })
+        .catch(error => console.error('Error:', error));
+}
+
+function displayDictionaryResults(results) {
+    const resultsContainer = document.getElementById('results-container');
+    const dictionaryResults = document.createElement('div');
+    dictionaryResults.className = 'result-item';
+
+    if (!Array.isArray(results) || results.length === 0) {
+        dictionaryResults.innerHTML = `<p>No dictionary results found for the query.</p>`;
+        resultsContainer.appendChild(dictionaryResults);
+        return;
+    }
+
+    const meanings = results[0].meanings.map(meaning => {
+        const definitions = meaning.definitions.map(def => `<li>${def.definition}</li>`).join('');
+        return `<h4>${meaning.partOfSpeech}</h4><ul>${definitions}</ul>`;
+    }).join('');
+
+    dictionaryResults.innerHTML = `<h2>Dictionary Results:</h2>${meanings}`;
+    resultsContainer.insertBefore(dictionaryResults, resultsContainer.firstChild);
 }
 
 function saveToFavorites(title, url) {
@@ -92,4 +98,5 @@ function removeFromFavorites(title) {
     displayFavorites();
 }
 
+// Call displayFavorites on page load to show the saved bookmarks
 document.addEventListener('DOMContentLoaded', displayFavorites);
