@@ -7,7 +7,7 @@ document.getElementById('search-button').addEventListener('click', function() {
 });
 
 function searchWikipedia(query) {
-    const endpoint = `https://www.reddit.com/dev/api/`;
+    const endpoint = `api.deepcrawl.com`;
 
     fetch(endpoint)
         .then(response => response.json())
